@@ -784,7 +784,7 @@ cfgMap = {
         "namespace":"openunison"
     },
     "data":{
-        "post-deploy-instructions":"",
+        "post-deploy-instructions":post_deploy_instructions,
         "openshift_idp_configuration":"",
         "saml2-rp-metadata":xmlMetaData
         

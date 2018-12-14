@@ -136,4 +136,4 @@ metadata:
   labels:
     application: "openunison"
   annotations:
-    description: OpenUnison's https port.
+    description: OpenUnison's https port for #[OU_HOST]
