@@ -97,10 +97,10 @@
             <param name="brokerURL" value="failover:(ssl://amq.openunison.svc.cluster.local:61616)?initialReconnectDelay=10000"/>
             <param name="trustStore" value="/etc/openunison/unisonKeyStore.p12" />
             <param name="trustStorePassword" value="#[unisonKeystorePassword]" />
-            <param name="trustStoreType" value="pkcs12" />
+            <param name="trustStoreType" value="PKCS12" />
             <param name="keyStore" value="/etc/openunison/unisonKeyStore.p12" />
             <param name="keyStorePassword" value="#[unisonKeystorePassword]" />
-            <param name="keyStoreType" value="pkcs12" />
+            <param name="keyStoreType" value="PKCS12" />
         </queueConfig>
         <portal>
 
