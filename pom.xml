@@ -9,10 +9,15 @@
   <url>http://openunison.io</url>
   <repositories>
     <repository>
+      <id>Tremolo Security Betas</id>
+      <url>https://nexus.tremolo.io/repository/betas/</url>
+    </repository>
+    <repository>
       <id>Tremolo Security Releases</id>
-      <url>https://www.tremolosecurity.com/nexus/content/repositories/releases/</url>
+      <url>https://nexus.tremolo.io/repository/releases/</url>
     </repository>
   </repositories>
+
   <dependencies>
     <dependency>
       <groupId>com.tremolosecurity.unison</groupId>
