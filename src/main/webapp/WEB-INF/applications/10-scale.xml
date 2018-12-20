@@ -165,9 +165,9 @@
                         <param name="attributeNames" value="projectName"/>
                         <param name="projectName.displayName" value="Project Name"/>
                         <param name="projectName.readOnly" value="false"/>
-                        <param name="projectName.required" value="false"/>
-                        <param name="projectName.regEx" value=".*"/>
-                        <param name="projectName.regExFailedMsg" value="Required"/>
+                        <param name="projectName.required" value="true"/>
+                        <param name="projectName.regEx" value="^[a-z0-9]([-a-z0-9]*[a-z0-9])?$"/>
+                        <param name="projectName.regExFailedMsg" value="A project name must be a valid DNS component, no spaces, upper case letters or underscores"/>
                         <param name="projectName.minChars" value="0"/>
                         <param name="projectName.maxChars" value="0"/>
                         <param name="projectName.unique" value="false"/>
@@ -238,7 +238,7 @@
     <!-- If set to true, the cookie's secure flag is set to true and the browser will only send this cookie over https connections -->
     <secure>false</secure>
     <!-- The number of secconds that the session should be allowed to be idle before no longer being valid -->
-    <timeout>900</timeout>
+    <timeout>#[SESSION_INACTIVITY_TIMEOUT_SECONDS]</timeout>
     <!-- required but ignored -->
     <scope>-1</scope>
   </cookieConfig>

@@ -39,7 +39,7 @@
     <logoutURI>/scale/sessioncheck</logoutURI>
     <keyAlias>session-unison</keyAlias>
     <secure>false</secure>
-    <timeout>true</timeout>
+    <timeout>1</timeout>
     <scope>-1</scope>
   </cookieConfig>
 </application>

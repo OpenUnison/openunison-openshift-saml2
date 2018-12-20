@@ -113,6 +113,10 @@ spec:
         - mountPath: /etc/activemq
           name: secret-volume
           readOnly: true
+        - mountPath: /usr/local/activemq/data
+          name: local-data
+        - mountPath: /usr/local/activemq/tmp
+          name: jetty-tmp
       dnsPolicy: ClusterFirst
       restartPolicy: Always
       terminationGracePeriodSeconds: 30
@@ -121,6 +125,10 @@ spec:
         secret:
           defaultMode: 420
           secretName: amq-secrets
+      - name: local-data
+        emptyDir: {}
+      - name: jetty-tmp
+        emptyDir: {}
 ---
 kind: Service
 apiVersion: v1
@@ -133,6 +141,7 @@ spec:
     deploymentConfig: "openunison"
 metadata:
   name: secure-openunison
+  namespace: openunison
   labels:
     application: "openunison"
   annotations:

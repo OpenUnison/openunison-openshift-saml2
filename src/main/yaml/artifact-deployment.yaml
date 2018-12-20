@@ -22,9 +22,9 @@ data:
     amqKS = Java.type(\"java.security.KeyStore\").getInstance(\"PKCS12\");\namqKS.load(null,ksPassword.toCharArray());\n\
     \nprint(\"trusting the amq client cert\");\namqKS.setCertificateEntry('trusted-amq-client',ouKs.getCertificate('amq-client'));\n\
     \nprint(\"generating the server side certificate\");\n\namqSrvCertInfo = {\n \
-    \ \"serverName\":\"amq.openunison.openunison.svc.cluster.local\",\n  \"ou\":\"\
-    kubernetes\",\n  \"o\":\"tremolo\",\n  \"l\":\"cloud\",\n  \"st\":\"cncf\",\n\
-    \  \"c\":\"ea\",\n  \"caCert\":false\n}\n\nvar amqSrvx509data = CertUtils.createCertificate(amqSrvCertInfo);\n\
+    \ \"serverName\":\"amq.openunison.svc.cluster.local\",\n  \"ou\":\"kubernetes\"\
+    ,\n  \"o\":\"tremolo\",\n  \"l\":\"cloud\",\n  \"st\":\"cncf\",\n  \"c\":\"ea\"\
+    ,\n  \"caCert\":false\n}\n\nvar amqSrvx509data = CertUtils.createCertificate(amqSrvCertInfo);\n\
     \nif (use_k8s_cm) {\n  print(\"create csr for activemq\");\n\n  amqCsrReq = {\n\
     \    \"apiVersion\": \"certificates.k8s.io/v1beta1\",\n    \"kind\": \"CertificateSigningRequest\"\
     ,\n    \"metadata\": {\n      \"name\": \"amq.openunison.svc.cluster.local\",\n\
@@ -187,8 +187,8 @@ data:
     \ for OpenUnison's https service.\"\n\t\t}\n\t},\n\t\"spec\": {\n\t\t\"host\"\
     : inProp['OU_HOST'],\n\t\t\"port\": {\n\t\t\t\"targetPort\": \"secure\"\n\t\t\
     },\n\t\t\"to\": {\n\t\t\t\"kind\": \"Service\",\n\t\t\t\"name\": \"secure-openunison\"\
-    \n\t\t},\n\t\t\"tls\": {\n\t\t\t\"termination\": \"reencrypt\"\n\t\t}\n\t}\n};\n\
-    \nk8s.postWS('/apis/route.openshift.io/v1/namespaces/openunison/routes',JSON.stringify(ou_route));\n\
+    \n\t\t},\n\t\t\"tls\": {\n\t\t\t\"termination\": \"reencrypt\",\n      \"destinationCACertificate\"\
+    :CertUtils.exportCert(k8s.getCertificate('k8s-master'))\n\t\t}\n\t}\n};\n\nk8s.postWS('/apis/route.openshift.io/v1/namespaces/openunison/routes',JSON.stringify(ou_route));\n\
     \nou_imagestream = {\n\t\"kind\": \"ImageStream\",\n\t\"apiVersion\": \"image.openshift.io/v1\"\
     ,\n\t\"metadata\": {\n\t\t\"name\": \"openunison\",\n\t\t\"labels\": {\n\t\t\t\
     \"application\": \"openunison\"\n\t\t}\n\t}\n};\n\nk8s.postWS('/apis/image.openshift.io/v1/namespaces/openunison/imagestreams',JSON.stringify(ou_imagestream));\n\
@@ -226,11 +226,12 @@ data:
     \t\t\t\t\t\t\t}\n\t\t\t\t\t\t],\n\t\t\t\t\t\t\"livenessProbe\": {\n\t\t\t\t\t\t\
     \t\"exec\": {\n\t\t\t\t\t\t\t\t\"command\": [\n\t\t\t\t\t\t\t\t\t\"/usr/local/openunison/bin/check_alive.py\"\
     \n\t\t\t\t\t\t\t\t]\n\t\t\t\t\t\t\t},\n\t\t\t\t\t\t\t\"initialDelaySeconds\":\
-    \ 30,\n\t\t\t\t\t\t\t\"timeoutSeconds\": 10\n\t\t\t\t\t\t},\n\t\t\t\t\t\t\"readinessProbe\"\
-    : {\n\t\t\t\t\t\t\t\"exec\": {\n\t\t\t\t\t\t\t\t\"command\": [\n\t\t\t\t\t\t\t\
-    \t\t\"/usr/local/openunison/bin/check_alive.py\"\n\t\t\t\t\t\t\t\t]\n\t\t\t\t\t\
-    \t\t},\n\t\t\t\t\t\t\t\"initialDelaySeconds\": 30,\n\t\t\t\t\t\t\t\"timeoutSeconds\"\
-    : 10\n\t\t\t\t\t\t},\n\t\t\t\t\t\t\"ports\": [\n\t\t\t\t\t\t\t{\n\t\t\t\t\t\t\t\
+    \ 30,\n\t\t\t\t\t\t\t\"timeoutSeconds\": 10,\n              \"failureThreshold\"\
+    :10\n\t\t\t\t\t\t},\n\t\t\t\t\t\t\"readinessProbe\": {\n\t\t\t\t\t\t\t\"exec\"\
+    : {\n\t\t\t\t\t\t\t\t\"command\": [\n\t\t\t\t\t\t\t\t\t\"/usr/local/openunison/bin/check_alive.py\"\
+    \n\t\t\t\t\t\t\t\t]\n\t\t\t\t\t\t\t},\n\t\t\t\t\t\t\t\"initialDelaySeconds\":\
+    \ 30,\n\t\t\t\t\t\t\t\"timeoutSeconds\": 10,\n              \"failureThreshold\"\
+    :10\n\t\t\t\t\t\t},\n\t\t\t\t\t\t\"ports\": [\n\t\t\t\t\t\t\t{\n\t\t\t\t\t\t\t\
     \t\"name\": \"http\",\n\t\t\t\t\t\t\t\t\"containerPort\": 8080,\n\t\t\t\t\t\t\t\
     \t\"protocol\": \"TCP\"\n\t\t\t\t\t\t\t},\n\t\t\t\t\t\t\t{\n\t\t\t\t\t\t\t\t\"\
     name\": \"https\",\n\t\t\t\t\t\t\t\t\"containerPort\": 8443,\n\t\t\t\t\t\t\t\t\
@@ -238,10 +239,11 @@ data:
     \t\t\t\t\t\t\t{\n\t\t\t\t\t\t\t\t\"name\": \"JAVA_OPTS\",\n\t\t\t\t\t\t\t\t\"\
     value\": \"-Djava.awt.headless=true -Djava.security.egd=file:/dev/./urandom\\\
     n-DunisonEnvironmentFile=/etc/openunison/ou.env\"\n\t\t\t\t\t\t\t}\n\t\t\t\t\t\
-    \t]\n\t\t\t\t\t}\n\t\t\t\t],\n\t\t\t\t\"volumes\": [\n\t\t\t\t\t{\n\t\t\t\t\t\t\
-    \"name\": \"secret-volume\",\n\t\t\t\t\t\t\"secret\": {\n\t\t\t\t\t\t\t\"secretName\"\
-    : \"openunison-secrets\"\n\t\t\t\t\t\t}\n\t\t\t\t\t}\n\t\t\t\t]\n\t\t\t}\n\t\t\
-    }\n\t}\n};\n\nk8s.postWS('/apis/apps.openshift.io/v1/namespaces/openunison/deploymentconfigs',JSON.stringify(ou_deployment));\n\
+    \t]\n\t\t\t\t\t}\n        ],\n        \"serviceAccount\":\"openunison\",\n   \
+    \     \"serviceAccountName\":\"openunison\",\n\t\t\t\t\"volumes\": [\n\t\t\t\t\
+    \t{\n\t\t\t\t\t\t\"name\": \"secret-volume\",\n\t\t\t\t\t\t\"secret\": {\n\t\t\
+    \t\t\t\t\t\"secretName\": \"openunison-secrets\"\n\t\t\t\t\t\t}\n\t\t\t\t\t}\n\
+    \t\t\t\t]\n\t\t\t}\n\t\t}\n\t}\n};\n\nk8s.postWS('/apis/apps.openshift.io/v1/namespaces/openunison/deploymentconfigs',JSON.stringify(ou_deployment));\n\
     \n\n\nxmlMetaData =  '<EntityDescriptor ID=\"_10685acd-7df4-427e-b61e-68e4f6407c24\"\
     \ entityID=\"https://' + inProp['OU_HOST'] + '/auth/SAML2Auth\" xmlns=\"urn:oasis:names:tc:SAML:2.0:metadata\"\
     >\\n';\nxmlMetaData += '  <SPSSODescriptor WantAssertionsSigned=\"true\" protocolSupportEnumeration=\"\
@@ -263,23 +265,27 @@ data:
     \                    \" 1.  In the same directory as your ansible inventory file,\
     \ create a file called group_vars/OSEv3.yaml\\n\" +\n                        \
     \   \" 2.  Add the following YAML to this file:\" +\n                        \
-    \   \"openshift_master_identity_providers:\\n\" +\n                          \
-    \ \"- name: openunison\\n\" +\n                           \"  challenge: false\\\
-    n\" +\n                           \"  login: true\\n\" +\n                   \
-    \        \"  mappingMethod: claim\\n\" +\n                           \"  kind:\
-    \ OpenIDIdentityProvider\\n\" +\n                           \"  clientID: openshift\\\
-    n\" +\n                           \"  clientSecret: \\n\" +\n                \
-    \           \"  ca: /etc/origin/master/ca.crt\\n\" +\n                       \
-    \    \"  claims:\\n\" +\n                           \"    id:\\n\" +\n       \
-    \                    \"    - sub\\n\" +\n                           \"    preferredUsername:\\\
-    n\" +\n                           \"    - preferred_username\\n\" + \n       \
-    \                    \"    name:\\n\" +\n                           \"    - name\\\
-    n\" +\n                           \"    email:\\n\" +\n                      \
-    \     \"    - email\\n\" +\n                           \"  urls:\\n\" +\n    \
-    \                       \"    authorize: https://unison.apps.demo.lan/auth/idp/OpenShift/auth\\\
-    n\" +\n                           \"    token: https://unison.apps.demo.lan/auth/idp/OpenShift/token\\\
-    n\" +\n                           \"3.  Copy /etc/origin/master/ca.crt to /etc/origin/master/openunison_openid_ca.crt\\\
-    n\" +\n                           \"4.  Run the openshift-ansible/playbooks/openshift-master/config.yml\
+    \   \"  openshift_master_identity_providers:\\n\" +\n                        \
+    \   \"  - name: openunison\\n\" +\n                           \"    challenge:\
+    \ false\\n\" +\n                           \"    login: true\\n\" +\n        \
+    \                   \"    mappingMethod: claim\\n\" +\n                      \
+    \     \"    provider:\\n\" +\n                           \"      apiVersion: v1\\\
+    n\" +\n                           \"      kind: OpenIDIdentityProvider\\n\" +\n\
+    \                           \"      clientID: openshift\\n\" +\n             \
+    \              \"      clientSecret: \\n\" +\n                           \"  \
+    \    ca: /etc/origin/master/ca.crt\\n\" +\n                           \"     \
+    \ claims:\\n\" +\n                           \"        id:\\n\" +\n          \
+    \                 \"        - sub\\n\" +\n                           \"      \
+    \  preferredUsername:\\n\" +\n                           \"        - preferred_username\\\
+    n\" + \n                           \"        name:\\n\" +\n                  \
+    \         \"        - name\\n\" +\n                           \"        email:\\\
+    n\" +\n                           \"        - email\\n\" +\n                 \
+    \          \"      urls:\\n\" +\n                           \"        authorize:\
+    \ https://\" + inProp[\"OU_HOST\"] + \"/auth/idp/OpenShiftIdP/auth\\n\" +\n  \
+    \                         \"        token: https://\" + inProp[\"OU_HOST\"] +\
+    \ \"/auth/idp/OpenShiftIdP/token\\n\" +\n                           \"3.  Copy\
+    \ /etc/origin/master/ca.crt to /etc/origin/master/openunison_openid_ca.crt\\n\"\
+    \ +\n                           \"4.  Run the openshift-ansible/playbooks/openshift-master/config.yml\
     \ playbook\\n\" + \n                           \"5.  Import the metadata generated\
     \ in saml2-rp-metadata\" \n                           \n\n\n\ncfgMap = {\n   \
     \ \"apiVersion\":\"v1\",\n    \"kind\":\"ConfigMap\",\n    \"metadata\":{\n  \
@@ -325,13 +331,17 @@ data:
     \ 1\n          timeoutSeconds: 10\n        resources: {}\n        terminationMessagePath:\
     \ /dev/termination-log\n        terminationMessagePolicy: File\n        volumeMounts:\n\
     \        - mountPath: /etc/activemq\n          name: secret-volume\n         \
-    \ readOnly: true\n      dnsPolicy: ClusterFirst\n      restartPolicy: Always\n\
-    \      terminationGracePeriodSeconds: 30\n      volumes:\n      - name: secret-volume\n\
-    \        secret:\n          defaultMode: 420\n          secretName: amq-secrets\n\
-    ---\nkind: Service\napiVersion: v1\nspec:\n  ports:\n  - port: 443\n    targetPort:\
-    \ 8443\n    name: secure\n  selector:\n    deploymentConfig: \"openunison\"\n\
-    metadata:\n  name: secure-openunison\n  labels:\n    application: \"openunison\"\
-    \n  annotations:\n    description: OpenUnison's https port for #[OU_HOST]"
+    \ readOnly: true\n        - mountPath: /usr/local/activemq/data\n          name:\
+    \ local-data\n        - mountPath: /usr/local/activemq/tmp\n          name: jetty-tmp\n\
+    \      dnsPolicy: ClusterFirst\n      restartPolicy: Always\n      terminationGracePeriodSeconds:\
+    \ 30\n      volumes:\n      - name: secret-volume\n        secret:\n         \
+    \ defaultMode: 420\n          secretName: amq-secrets\n      - name: local-data\n\
+    \        emptyDir: {}\n      - name: jetty-tmp\n        emptyDir: {}\n---\nkind:\
+    \ Service\napiVersion: v1\nspec:\n  ports:\n  - port: 443\n    targetPort: 8443\n\
+    \    name: secure\n  selector:\n    deploymentConfig: \"openunison\"\nmetadata:\n\
+    \  name: secure-openunison\n  namespace: openunison\n  labels:\n    application:\
+    \ \"openunison\"\n  annotations:\n    description: OpenUnison's https port for\
+    \ #[OU_HOST]"
   quartz.sql: "# By: Ron Cordell - roncordell\n#  I didn't see this anywhere, so I\
     \ thought I'd post it here. This is the script from Quartz to create the tables\
     \ in a MySQL database, modified to use INNODB instead of MYISAM.\n\n\n# make sure\
@@ -415,7 +425,21 @@ data:
     CREATE INDEX IDX_QRTZ_FT_JG ON QRTZ_FIRED_TRIGGERS(SCHED_NAME,JOB_GROUP);\nCREATE\
     \ INDEX IDX_QRTZ_FT_T_G ON QRTZ_FIRED_TRIGGERS(SCHED_NAME,TRIGGER_NAME,TRIGGER_GROUP);\n\
     CREATE INDEX IDX_QRTZ_FT_TG ON QRTZ_FIRED_TRIGGERS(SCHED_NAME,TRIGGER_GROUP);\n\
-    \ncommit; \n"
+    \n\nCREATE TABLE `ACTIVEMQ_ACKS` (\n  `CONTAINER` varchar(250) NOT NULL,\n  `SUB_DEST`\
+    \ varchar(250) DEFAULT NULL,\n  `CLIENT_ID` varchar(250) NOT NULL,\n  `SUB_NAME`\
+    \ varchar(250) NOT NULL,\n  `SELECTOR` varchar(250) DEFAULT NULL,\n  `LAST_ACKED_ID`\
+    \ bigint(20) DEFAULT NULL,\n  `PRIORITY` bigint(20) NOT NULL DEFAULT '5',\n  `XID`\
+    \ varchar(250) DEFAULT NULL,\n  PRIMARY KEY (`CONTAINER`,`CLIENT_ID`,`SUB_NAME`,`PRIORITY`),\n\
+    \  KEY `ACTIVEMQ_ACKS_XIDX` (`XID`)\n);\n\nCREATE TABLE `ACTIVEMQ_LOCK` (\n  `ID`\
+    \ bigint(20) NOT NULL,\n  `TIME` bigint(20) DEFAULT NULL,\n  `BROKER_NAME` varchar(250)\
+    \ DEFAULT NULL,\n  PRIMARY KEY (`ID`)\n);\n\nCREATE TABLE `ACTIVEMQ_MSGS` (\n\
+    \  `ID` bigint(20) NOT NULL,\n  `CONTAINER` varchar(250) NOT NULL,\n  `MSGID_PROD`\
+    \ varchar(250) DEFAULT NULL,\n  `MSGID_SEQ` bigint(20) DEFAULT NULL,\n  `EXPIRATION`\
+    \ bigint(20) DEFAULT NULL,\n  `MSG` mediumblob,\n  `PRIORITY` bigint(20) DEFAULT\
+    \ NULL,\n  `XID` varchar(250) DEFAULT NULL,\n  PRIMARY KEY (`ID`),\n  KEY `ACTIVEMQ_MSGS_MIDX`\
+    \ (`MSGID_PROD`,`MSGID_SEQ`),\n  KEY `ACTIVEMQ_MSGS_CIDX` (`CONTAINER`),\n  KEY\
+    \ `ACTIVEMQ_MSGS_EIDX` (`EXPIRATION`),\n  KEY `ACTIVEMQ_MSGS_PIDX` (`PRIORITY`),\n\
+    \  KEY `ACTIVEMQ_MSGS_XIDX` (`XID`)\n);\n\n\ncommit; \n"
 kind: ConfigMap
 metadata:
   name: deployment-scripts

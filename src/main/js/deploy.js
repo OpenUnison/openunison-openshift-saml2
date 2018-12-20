@@ -49,7 +49,7 @@ amqKS.setCertificateEntry('trusted-amq-client',ouKs.getCertificate('amq-client')
 print("generating the server side certificate");
 
 amqSrvCertInfo = {
-  "serverName":"amq.openunison.openunison.svc.cluster.local",
+  "serverName":"amq.openunison.svc.cluster.local",
   "ou":"kubernetes",
   "o":"tremolo",
   "l":"cloud",
@@ -546,7 +546,8 @@ ou_route = {
 			"name": "secure-openunison"
 		},
 		"tls": {
-			"termination": "reencrypt"
+			"termination": "reencrypt",
+      "destinationCACertificate":CertUtils.exportCert(k8s.getCertificate('k8s-master'))
 		}
 	}
 };
@@ -680,7 +681,8 @@ ou_deployment = {
 								]
 							},
 							"initialDelaySeconds": 30,
-							"timeoutSeconds": 10
+							"timeoutSeconds": 10,
+              "failureThreshold":10
 						},
 						"readinessProbe": {
 							"exec": {
@@ -689,7 +691,8 @@ ou_deployment = {
 								]
 							},
 							"initialDelaySeconds": 30,
-							"timeoutSeconds": 10
+							"timeoutSeconds": 10,
+              "failureThreshold":10
 						},
 						"ports": [
 							{
@@ -710,7 +713,9 @@ ou_deployment = {
 							}
 						]
 					}
-				],
+        ],
+        "serviceAccount":"openunison",
+        "serviceAccountName":"openunison",
 				"volumes": [
 					{
 						"name": "secret-volume",
@@ -748,27 +753,29 @@ xmlMetaData += '</EntityDescriptor>';
 post_deploy_instructions = "After the build is complete:\n" +
                            " 1.  In the same directory as your ansible inventory file, create a file called group_vars/OSEv3.yaml\n" +
                            " 2.  Add the following YAML to this file:" +
-                           "openshift_master_identity_providers:\n" +
-                           "- name: openunison\n" +
-                           "  challenge: false\n" +
-                           "  login: true\n" +
-                           "  mappingMethod: claim\n" +
-                           "  kind: OpenIDIdentityProvider\n" +
-                           "  clientID: openshift\n" +
-                           "  clientSecret: \n" +
-                           "  ca: /etc/origin/master/ca.crt\n" +
-                           "  claims:\n" +
-                           "    id:\n" +
-                           "    - sub\n" +
-                           "    preferredUsername:\n" +
-                           "    - preferred_username\n" + 
-                           "    name:\n" +
-                           "    - name\n" +
-                           "    email:\n" +
-                           "    - email\n" +
-                           "  urls:\n" +
-                           "    authorize: https://unison.apps.demo.lan/auth/idp/OpenShift/auth\n" +
-                           "    token: https://unison.apps.demo.lan/auth/idp/OpenShift/token\n" +
+                           "  openshift_master_identity_providers:\n" +
+                           "  - name: openunison\n" +
+                           "    challenge: false\n" +
+                           "    login: true\n" +
+                           "    mappingMethod: claim\n" +
+                           "    provider:\n" +
+                           "      apiVersion: v1\n" +
+                           "      kind: OpenIDIdentityProvider\n" +
+                           "      clientID: openshift\n" +
+                           "      clientSecret: \n" +
+                           "      ca: /etc/origin/master/ca.crt\n" +
+                           "      claims:\n" +
+                           "        id:\n" +
+                           "        - sub\n" +
+                           "        preferredUsername:\n" +
+                           "        - preferred_username\n" + 
+                           "        name:\n" +
+                           "        - name\n" +
+                           "        email:\n" +
+                           "        - email\n" +
+                           "      urls:\n" +
+                           "        authorize: https://" + inProp["OU_HOST"] + "/auth/idp/OpenShiftIdP/auth\n" +
+                           "        token: https://" + inProp["OU_HOST"] + "/auth/idp/OpenShiftIdP/token\n" +
                            "3.  Copy /etc/origin/master/ca.crt to /etc/origin/master/openunison_openid_ca.crt\n" +
                            "4.  Run the openshift-ansible/playbooks/openshift-master/config.yml playbook\n" + 
                            "5.  Import the metadata generated in saml2-rp-metadata" 
