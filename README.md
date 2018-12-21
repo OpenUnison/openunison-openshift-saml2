@@ -1,14 +1,14 @@
-# OpenShift Identity Manager
+# OpenShift Self Service Portal
 
-This quick start for OpenUnison is designed to provide an identity management hub for OpenShift that will:
+This application, built on OpenUnison, is a self service portal for Red Hat's OpenShift and OKD.  It provides a single interface for:
 
-1. Provide an OpenID Connect Bridge for SAML2, multiple LDAP directories, add compliance acknowledgment, etc
+1. Authentication via SAML2, multiple LDAP directories, add compliance acknowledgment, etc
 2. Self service portal for requesting access to and getting approval for individual projects
 3. Self service requests for gaining cluster level roles
 4. Support removing users' access
 5. Reporting
 
-The quick start can run inside of OpenShift, leveraging OpenShift for scalability and secret management.  It can also be run externally to OpenShift.  
+The portal runs inside of OpenShift, leveraging OpenShift for scalability and secret management.  
 
 ![OpenShift Identity Manager Architecture](imgs/openunison_qs_openshift.png)
 
@@ -22,8 +22,8 @@ The OpenUnison deployment stores all OpenShift access information as a group in 
 
 ## Projects
 
-1.  Editors - Can edit and deploy into a project, can not manipulate users
-2.  Viewers - Can view contents of a project, but can not make changes
+1.  Admin - Can edit and deploy into a project, can not change project annotations
+2.  View - Can view contents of a project, but can not make changes
 
 ## Non-OpenShift
 
@@ -33,120 +33,121 @@ The OpenUnison deployment stores all OpenShift access information as a group in 
 # Deployment
 
 The deployment model assumes:
-1. OpenShift 3.x or higher (Origin or Downstream)
-2. An image repository
-3. Access to a certified RDBMS (may run on OpenShift)
+1. OpenShift 3.x or higher (OKD is supported)
+2. MySQL or MariaDB
+3. The metadata for your SAML2 identity provider
+4. Email Server for notifications
 
-These instructions cover using the Source-to-Image created by Tremolo Security for OpenUnison, but can be deployed into any J2EE container like tomcat, wildfly, etc.  The Source-to-Image builder will build a container image from your unison.xml and myvd.props file that has all of your libraries running a hardened version of Apache Tomcat 8.5 on the latest CentOS.  The keystore required for deployment will be stored as a secret in OpenShift.
+*NOTE* if using the Red Hat certified images, you'll need credentials for Red Hat Connect.
 
-## Generating Keystore
+These instructions cover using the Source-to-Image created by Tremolo Security for OpenUnison.  The Source-to-Image builder will build a container image from your unison.xml and myvd.props file that has all of your libraries running a hardened version of Undertow on the latest CentOS or Red Hat Enterprise Linux.  The keystore required for deployment will be stored as a secret in OpenShift.
 
-OpenUnison encrypts or signs everything that leaves it such as JWTs, workflow requests, session cookies, etc. To do this, we need to create a Java keystore that can be used to store these keys as well as the certificates used for TLS by Tomcat. When working with OpenShift something to take note of is Go does NOT work with self signed certificates that are not marked as CA:TRUE no matter how many ways you trust it. In order to use a self signed certificate you have to create a self signed certificate authority and THEN create a certificate signed by that CA. This can be done using Java's keytool but OpenSSL's approach is easier. To make this easier, the makecerts.sh script in this repository (`src/main/bash/makessl.sh`) (adapted from a similar script from CoreOS) will do this for you. Just make sure to change the subject in the script first:
-
-```bash
-$ sh makessl.sh
-$ cd ssl
-$ openssl pkcs12 -export -chain -inkey key.pem -in cert.pem -CAfile ca.pem -out openunison.p12
-$ cd ..
-$ keytool -importkeystore -srckeystore ./ssl/openunison.p12 -srcstoretype PKCS12 -alias 1 -destKeystore ./unisonKeyStore.jks -deststoretype JCEKS -destalias unison-tls
-```
-
-```bash
-$ keytool -genseckey -alias session-unison -keyalg AES -keysize 256 -storetype JCEKS -keystore ./unisonKeyStore.jks
-$ keytool -genseckey -alias lastmile-oidc -keyalg AES -keysize 256 -storetype JCEKS -keystore ./unisonKeyStore.jks
-
-```
-
-Then the SAML2 RP certificate
-```bash
-$ keytool -genkeypair -storetype JCEKS -alias unison-saml2-rp-sig -keyalg RSA -keysize 2048 -sigalg SHA256withRSA -keystore  ./unisonKeyStore.jks -validity 3650
-```
-
-Import the SAML2 signing certificate from your identity provider
-```bash
-$ keytool -import -trustcacerts -alias idp-saml2-sig -rfc -storetype JCEKS -keystore ./unisonKeyStore.jks -file /path/to/certificate.pem
-```
-
-Import the trusted certificate for OpenShift by looking for the certificate the master (Kubernetes API) server runs under.  This will depend on how you deployed OpenShift.  For instance for `oc cluster up` import the certificate from `/var/lib/origin/openshift.local.config/master/master.server.crt`:
-```bash
-$ keytool -import -trustcacerts -alias openshift-master -rfc -storetype JCEKS -keystore ./unisonKeyStore.jks -file /path/to/master.server.crt
-```  
-
-
-## Create OpenShift Service Account
-
-The easiest way to create this account is to login to the OpenShift master to run oadm and oc (these instructions from OpenUnison's product manual):
-
-```bash
-$ oc new-project openunison
-$ oc project openunison
-$ cat <<EOF | oc create -n openunison -f -
-kind: ServiceAccount
-apiVersion: v1
-metadata:
-  name: unison
-EOF
-$ oadm policy add-cluster-role-to-user cluster-admin system:serviceaccount:openunison:unison
-$ oc describe serviceaccount unison
-$ oc describe secret unison-token-XXXX
-```
-
-In the above example, XXXX is the id of one of the tokens generated in the `Tokens` section of the output from the `oc describe serviceaccount unison`.  The final command will output a large, base64 encoded token.  This token is what OpenUnison will use to communicate with OpenShift.  Hold on to this value for the next step.
-
-## Create cluster-admins Group
-
-Login to the master via SSH to use the `oadm` tool.  
-
-```bash
-$ oadm groups new cluster-admins
-$ oadm policy add-cluster-role-to-group cluster-admin cluster-admins
-```
 
 ## Create Environments File
 
-OpenUnison stores environment specific information, such as host names, passwords, etc, in a properties file that will then be loaded by OpenUnison.  This file will be stored in OpenShift as a secret then accessed by OpenUnison on startup to fill in the `#[]` parameters in `unison.xml` and `myvd.conf`.  For instance the parameter `#[OU_HOST]` in `unison.xml` would have an entry in this file.  Below is an example file, this file should be saved as `ou.env`:
+OpenUnison stores environment specific information, such as host names, passwords, etc, in a properties file that will then be loaded by OpenUnison and merged with its configruation.  This file will be stored in Kubernetes as a secret then accessed by OpenUnison on startup to fill in the `#[]` parameters in `unison.xml` and `myvd.conf`.  For instance the parameter `#[OU_HOST]` in `unison.xml` would have an entry in this file.  Below is an example file:
 
 ```properties
-OU_HOST=openunison.demo.aws
+BUILDER_IMAGE=tremolosecurity/openunisons2idocker
+OPENSHIFT_CONSOLE_URL=https://openshift.tslocal.lan:8443/console
+OU_CERT_C=US
+OU_CERT_L=Alexandria
+OU_CERT_O=Tremolo Security
+OU_CERT_ST=Virginia
 OU_HIBERNATE_DIALECT=org.hibernate.dialect.MySQL5InnoDBDialect
+OU_HOST=openunison.apps.tslocal.lan
 OU_JDBC_DRIVER=com.mysql.jdbc.Driver
-OU_JDBC_URL=jdbc:mysql://mariadb.openunison.svc:3306/openunison
-OU_JDBC_USER=unison
 OU_JDBC_PASSWORD=start123
-SMTP_HOST=smtp.gmail.com
-SMTP_PORT=587
-SMTP_USER=XXXX
-SMTP_PASSWORD=XXXX
-SMTP_FROM=donotreply@tremolosecurity.com
-SMTP_TLS=true
+OU_JDBC_URL=jdbc:mysql://192.168.56.101:3306/unison
+OU_JDBC_USER=unison
 OU_JDBC_VALIDATION=SELECT 1
-OPENSHIFT_CONSOLE_URL=https://openshift.demo.aws:8443/console/
-OPENSHIFT_URL=https://kubernetes.default.svc:443
-OPENSHIFT_TOKEN=eyJhbG.....
-OU_OIDC_OPENSHIFT_SECRET=secret
-OU_OIDC_OPENSHIFT_REIDRECT=https://openshift.demo.aws:8443/oauth2callback/openunison
-OPENSHIFT_OU_HOST=openunison.openunison.svc
-unisonKeystorePassword=xxxx
-IDP_POST=https://idp.ent2k12.domain.com/adfs/ls/
-IDP_REDIR=https://idp.ent2k12.domain.com/adfs/ls/
-IDP_LOGOUT=https://idp.ent2k12.domain.com/adfs/ls/
-IDP_ENTITY_ID=https://idp.ent2k12.domain.com/adfs/services/trust
+OU_OIDC_OPENSHIFT_REIDRECT=https://openshift.tslocal.lan:8443/oauth2callback/openunison
+OU_OIDC_OPENSHIFT_SECRET=start123
+OU_QUARTZ_DIALECT=org.quartz.impl.jdbcjobstore.StdJDBCDelegate
+OU_QUARTZ_MASK=10
+REG_CRED_PASSWORD=XXXXX
+REG_CRED_USER=XXXXX
+SESSION_INACTIVITY_TIMEOUT_SECONDS=900
+SMTP_FROM=donotreply@tremolosecurity.com
+SMTP_HOST=smtp.gmail.com
+SMTP_PASSWORD=XXXXXXXX
+SMTP_PORT=587
+SMTP_TLS=true
+SMTP_USER=donotreply@tremolosecurity.com
+unisonKeystorePassword=start123
 ```
 
-## Export SAML2 Metadata
+*Detailed Description or Properties*
 
-Once your environment file is built, metadata can be generated for your identity provider.  First download the OpenUnion utilities jar file from `https://www.tremolosecurity.com/nexus/service/local/repositories/releases/content/com/tremolosecurity/unison/openunison-util/1.0.12/openunison-util-1.0.12.jar` and run the export:
+| Property | Description |
+| -------- | ----------- |
+| OU_HOST  | The host name for OpenUnison.  This is what user's will put into their browser to login to Kubernetes |
+| OU_HIBERNATE_DIALECT | Hibernate dialect for accessing the database.  Unless customizing for a different database do not change |
+| OU_QUARTZ_DIALECT | Dialect used by the Quartz Scheduler.  Unless customizing for a different database do not change  |
+| OU_JDBC_DRIVER | JDBC driver for accessing the database.  Unless customizing for a different database do not change |
+| OU_JDBC_URL | The URL for accessing the database |
+| OU_JDBC_USER | The user for accessing the database |
+| OU_JDBC_PASSWORD | The password for accessing the database |
+| OU_JDBC_VALIDATION | A query for validating database connections/ Unless customizing for a different database do not change |
+| SMTP_HOST | Host for an email server to send notifications |
+| SMTP_PORT | Port for an email server to send notifications |
+| SMTP_USER | Username for accessing the SMTP server (may be blank) |
+| SMTP_PASSWORD | Password for accessing the SMTP server (may be blank) |
+| SMTP_FROM | The email address that messages from OpenUnison are addressed from |
+| SMTP_TLS | true or false, depending if SMTP should use start tls |
+| OU_CERT_OU | The `OU` attribute for the forward facing certificate |
+| OU_CERT_O | The `O` attribute for the forward facing certificate |
+| OU_CERT_L | The `L` attribute for the forward facing certificate |
+| OU_CERT_ST | The `ST` attribute for the forward facing certificate |
+| OU_CERT_C | The `C` attribute for the forward facing certificate |
+| unisonKeystorePassword | The password for OpenUnison's keystore |
+| SESSION_INACTIVITY_TIMEOUT_SECONDS | The number of seconds of inactivity before the session is terminated, also the length of the refresh token's session |
+| BUILDER_IMAGE | The name of the image used to build OpenUnison.  This image can be eiter the CentOS 7 based image on dockerhub, or an image from a privare respository.  If wanting to use the Red Hat certified image, use `registry.connect.redhat.com/tremolosecurity/openunison-s2i-10` |
+| OPENSHIFT_CONSOLE_URL | The URL for the OpenShift cluster's console.  Usually `https://host.domain/console/` |
+| OU_OIDC_OPENSHIFT_REIDRECT | Redirect back to OpenShift to finish the signin process, usually the same host as the console with the path `/oauth2callback/openunison` |
+| OU_OIDC_OPENSHIFT_SECRET | A shared secret between OpenShift and OpenUnison to complete authentication |
+| REG_CRED_USER | Username for a private registry (such as registry.connect.redhat.com) |
+| REG_CRED_PASSWORD | Password for a private registry (such as registryion.connect.redhat.com) |
 
-```bash
-$ java -jar ./openunison-util-1.0.12.jar -action export-sp-metadata -chainName enterprise_idp -unisonXMLFile /path/to/openunison-qs-openshift/src/main/webapp/WEB-INF/unison.xml -keystorePath ./unisonKeyStore.jks -envFile ./ou.env -mechanismName SAML2 -urlBase https://openunison.demo.aws
+Store these parameters in a file called `input.props`.
+
+## Prepare Deployment
+
+Perform these steps from a location with a working `kubectl` configuration:
+
+1. Create a directory to store `input.props`, ie `/path/to/props` and put `input.props` in that directory
+2. Copy the metadata from your SAML2 identity provider to `/path/to/props/saml2-metadata.xml`
+3. Create a directory for certs, ie `/path/to/certs`
+
+## Deployment
+
+Based on where you put the files from `Prepare Deployment`, run the following:
+
+```
+curl https://raw.githubusercontent.com/TremoloSecurity/kubernetes-artifact-deployment/master/src/main/bash/deploy_openunison.sh | bash -s /path/to/certs /path/to/props https://raw.githubusercontent.com/OpenUnison/openunison-openshift-saml2/master/src/main/yaml/artifact-deployment.yaml
 ```
 
-Make sure to replace the `-urlBase` with the URL user for accessing OpenUnison.  It should use the same host as in OU_HOST.  This command will generate XML to the console that can be copied&pasted into a file that can be submited to your identity provider.
+The output will look like:
 
+```
+namespace/openunison-deploy created
+configmap/extracerts created
+secret/input created
+clusterrolebinding.rbac.authorization.k8s.io/artifact-deployment created
+job.batch/artifact-deployment created
+NAME                        READY     STATUS    RESTARTS   AGE
+artifact-deployment-jzmnr   0/1       Pending   0          0s
+artifact-deployment-jzmnr   0/1       Pending   0         0s
+artifact-deployment-jzmnr   0/1       ContainerCreating   0         0s
+artifact-deployment-jzmnr   1/1       Running   0         4s
+artifact-deployment-jzmnr   0/1       Completed   0         15s
+```
 
-### Configure Identity Provider
+Once you see `Completed`, you can exit the script (`Ctl+C`).  This script creates all of the appropriate objects in Kubernetes, signs certificates and deploys both OpenUnison and the Dashboard.  
 
-Once the OpenUnison metadata is imported, make sure the following attributes are in the assertion:
+## Complete Integrate with your Identity Provider
+
+Run `kubectl describe configmap api-server-config -n openunison` to get the metadata for your identity provider.  Import it into your identity provider and add the following attributes to the assertion so OpenUnison knows how the logged in uers is:
 
 | Attribute Name | Active Directory Attribute | Description |
 | -------------- | -------------------------- | ----------- |
@@ -161,111 +162,12 @@ c:[Type == "http://schemas.microsoft.com/ws/2008/06/identity/claims/windowsaccou
  => issue(store = "Active Directory", types = ("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier", "uid", "givenName", "sn", "mail"), query = ";sAMAccountName,sAMAccountName,givenName,sn,mail;{0}", param = c.Value);
 ```
 
-## Create OpenUnison YAML
-
-OpenUnison can be configured to use specific TLS ciphers or algorithms.  Create a file called `openunison.yaml` in the same directory where you created your ou.env and unisonKeyStore.jks file using the content from the [OpenUnisonS2IDocker ReadMe](https://github.com/TremoloSecurity/OpenUnisonS2IDocker/blob/master/README.md) under the section **openunison.yaml**.  Unless you have special requirements (ie you need to allow more or fewer ciphers) you shouldn't need to make any changes.   
-
-## Deploy OpenUnison Secret
-
-OpenShift stores secrets, ie passwords, keystores, etc in special volumes called Secrets.  Creating a secret involves base64 encoding your files and putting them into a YAML file, which is error prone.  To make this easier there's a script that will create the secret yaml for you so you can import it into openshift in `src/main/bash`:
-
-```bash
-$ ./makesecret.sh /path/to/openunison-artifacts | oc create -f - -n openunison
-```
-
-## Build OpenUnison
-
-OpenUnison is best built using the OpenUnison s2i builder.  This builder can either build OpenUnison based on an existing maven project, or it can simply deploy a war file of a pre-built OpenUnison project.  For a detailed explination of the OpenUnison build process, see OpenUnison's [deployment documentation](https://www.tremolosecurity.com/docs/tremolosecurity-docs/1.0.12/openunison/openunison-manual.html#_deploying_openunison_on_undertow).
-
-### Let OpenShift Build OpenUnison
-
-OpenShift's built in ImageStream and BuildConfig objects let you build OpenUnison from your project directly out of GitHub.  This is a great approach when you're using GitHub and don't have an existing CI/CD pipeline in place.
-
-The first step is to pull the s2i builder image into OpenShift's docker image repository.
-
-```bash
-$ oc import-image openunison-s2i:latest --from=docker.io/tremolosecurity/openunisons2idocker:latest
-```
-This will create an `ImageStream` in the openunison project that will be used for building OpenUnison. 
-
-Next, deploy the S2I template to your project:
-
-```bash
-$ oc create -f /path/to/git/openunison-qs-openshift/src/main/json/openunison-https-s2i.json -n openunison
-```
-Once the template is deployed, process the template:
-
-```bash
-$ oc process openunison-https-s2i  -p APPLICATION_NAME=openunison -p HOSTNAME_HTTPS=ouidp.tremolo.lan -p SOURCE_REPOSITORY_URL=https://github.com/TremoloSecurity/openunison-qs-openshift.git | oc create -f -
-service "secure-openunison" created
-route "secure-openunison" created
-imagestream "openunison" created
-buildconfig "openunison" created
-deploymentconfig "openunison" created
-```
-
-Make sure to specify your own repository.  You can also process the template through the OpenShift UI using the "Add to Project" --> Single Sign-On --> OpenUnison 1.0.12.
-
-Here's the list of available parameters:
-
-```bash
-$ oc process openunison-https-s2i  --parameters
-NAME                     DESCRIPTION                                                                                                                                                                                                                                                  GENERATOR           VALUE
-APPLICATION_NAME         The name for the application.                                                                                                                                                                                                                                                    openunison
-HOSTNAME_HTTP            Custom hostname for http service route.  Leave blank for default hostname, e.g.: <application-name>-<project>.<default-domain-suffix>                                                                                                                                            
-HOSTNAME_HTTPS           Custom hostname for https service route.  Leave blank for default hostname, e.g.: secure-<application-name>-<project>.<default-domain-suffix>                                                                                                                                    
-SOURCE_REPOSITORY_URL    Git source URI for application                                                                                                                                                                                                                                                   https://github.com/TremoloSecurity/openunison-qs-openshift.git
-SOURCE_REPOSITORY_REF    Git branch/tag reference                                                                                                                                                                                                                                                         master
-CONTEXT_DIR              Path within Git project to build; empty for root project directory.                                                                                                                                                                                                              /
-GITHUB_WEBHOOK_SECRET    GitHub trigger secret                                                                                                                                                                                                                                        expression          [a-zA-Z0-9]{8}
-GENERIC_WEBHOOK_SECRET   Generic build trigger secret                                                                                                                                                                                                                                 expression          [a-zA-Z0-9]{8}
-IMAGE_STREAM_NAMESPACE   Namespace in which the ImageStreams for OpenUnison images are installed. These ImageStreams are normally installed in the openunison namespace. You should only need to modify this if you've installed the ImageStreams in a different namespace/project.                       openunison
-```
+Once the metadata is imported and the attributes are added, you are ready to login to OpenUnison.
 
 
-### Build OpenUnison Externally
+## Building OpenUnison
 
-The OpenUnison Source2Image builder will pull your project from source control, build it (integrating the basic OpenUnison libraries) and create a docker image built on OpenUnison's Undertow implementation.  This image can then be pushed to your OpenShift repository.  The first step is to have Docker installed.  Then download the proper s2i build for your platform from https://github.com/openshift/source-to-image/releases and finally deploy the template to OpenShift.
-
-```bash
-$ oc create -f /path/to/git/openunison-qs-openshift/src/main/json/openunison-https-bin.json -n openunison
-```
-
-Once the template is deployed, process the template:
-
-```bash
-$ oc process openunison-https-bin  -p APPLICATION_NAME=openunison -p HOSTNAME_HTTPS=ouidp.tremolo.lan  | oc create -f -
-service "secure-openunison" created
-route "secure-openunison" created
-imagestream "openunison" created
-deploymentconfig "openunison" created
-```
-
-You can also process the template through the OpenShift UI using the "Add to Project" --> Single Sign-On --> OpenUnison 1.0.12.
-
-Here's the list of available parameters:
-
-```bash
-oc process openunison-https-bin  --parameters
-NAME                     DESCRIPTION                                                                                                                                                                                                                                                  GENERATOR           VALUE
-APPLICATION_NAME         The name for the application.                                                                                                                                                                                                                                                    openunison
-HOSTNAME_HTTPS           Custom hostname for https service route.  Leave blank for default hostname, e.g.: secure-<application-name>-<project>.<default-domain-suffix>                                                                                                                                    
-IMAGE_STREAM_NAMESPACE   Namespace in which the ImageStreams for OpenUnison images are installed. These ImageStreams are normally installed in the openunison namespace. You should only need to modify this if you've installed the ImageStreams in a different namespace/project.                       openunison
-```
-
-Now that the objects have been created, create a container using s2i using your OpenUnison project:
-
-```bash
-$ docker pull docker.io/tremolosecurity/openunisons2idocker:latest
-$ s2i build https://github.com/TremoloSecurity/openunison-qs-openshift.git docker.io/tremolosecurity/openunisons2idocker:latest docker-registry-local.tremolo.lan/openunison/openunison:latest
-$ docker push docker-registry-local.tremolo.lan/openunison/openunison:latest
-```
-
-Make sure to replace `docker-registry-local.tremolo.lan` with the host of your OpenShift registry.  Once the image is pushed, OpenShift will launch a pod based on it.
-
-### Using OpenShift Container Platform on Red Hat Enterprise Linux?
-
-Tremolo Security has a Red Hat certified builder for OpenUnison.  Instead of `docker.io/tremolosecurity/openunisons2idocker:latest` use `registry.connect.redhat.com/tremolosecurity/openunison-s2i-10` to use the Red Hat certified container builder.
+Once deployed, OpenShift will start building OpenUnison.  You can check the build process (depending on your internet connection) by running  `oc get builds`.  Once OpenUnison is running, you can proceed to the `First Login to OpenShift Identity Manager`
 
 ## First Login to the OpenShift Identity Manager
 
@@ -292,63 +194,25 @@ Once SSO is enabled in the next step, you'll need a cluster administrator to be 
 5.  Next to "Check Out" in the title bar you'll see a red `1`, click on "Check Out"
 6.  For "Supply Reason", give a reason like "Initial user" and click "Submit Request"
 7.  Since you are the only approver refresh OpenUnison, you will see a red `1` next to "Open Approvals".  Click on "Open Approvals"
-8. Click "Review" next to your email address
-9. Specify "Initial user" for the "Justification" and click "Approve"
+8.  Click "Review" next to your email address
+9.  Specify "Initial user" for the "Justification" and click "Approve"
 10. Click on "Confirm Approval"
 
 At this point you will be provisioned to the `cluster-admins` group in OpenShift we created earlier.  Logout of OpenUnison and log back in.  If you click on your email address in the upper left, you'll see that you have the Role `OpenShift - cluster-admins`.  
 
 ## Enable SSO with OpenShift Console
 
-This step will vary based on how you have deployed OpenShift.  These instructions assume your setup uses `oc cluster up`.  The first step is to have the OpenShift master(s) trust OpenUnison's TLS certificate.  For `oc cluster up` copy the the `ssl\ca.pem` file we created at the beginning of this tutorial to `/var/lib/origin/openshift.local.config/master/openunison_ca.crt`.
-
-Next, edit `/var/lib/origin/openshift.local.config/master/master-config.yaml` to add the OpenID Connect configuration.  Under `oauthConfig` add an OpenID Connect Identity Provider:
-
-```yaml
-oauthConfig:
-  alwaysShowProviderSelection: false
-  assetPublicURL: https://openshift.demo.aws:8443/console/
-  grantConfig:
-    method: auto
-    serviceAccountMethod: prompt
-  identityProviders:
-  - name: openunison
-    challenge: true
-    login: true
-    mappingMethod: claim
-    provider:
-      apiVersion: v1
-      kind: OpenIDIdentityProvider
-      clientID: openshift
-      clientSecret: XXXXX
-      ca: /var/lib/origin/openshift.local.config/master/openunison_ca.crt
-      claims:
-        id:
-        - sub
-        preferredUsername:
-        - preferred_username
-        name:
-        - name
-        email:
-        - email
-      urls:
-        authorize: https://openunison.demo.aws/auth/idp/OpenShiftIdP/auth
-        token: https://openunison.demo.aws/auth/idp/OpenShiftIdP/token
-```
-
-In the above configuration, replace the `XXXXX` of `clientSecret` with the value of `OU_OIDC_OPENSHIFT_SECRET` from your `ou.env` file.  Also make sure that the urls use the same host names as defined by your `HOSTNAME_HTTPS` variable when processing the template and is resolvable by DNS.  
-
 OpenShift doesn't directly support single logout, so to logout of OpenUnison (and your SAML2 identity provider) update the `logoutURL` setting in the `master-config.yaml` file to point to `/logout` on your OpenUnison deployment.  So if your `HOSTNAME_HTTPS` were `ouidp.tremolo.lan` the value should be `https://ouidp.tremolo.lan/logout`.
 
-Before restarting, we want to make sure that users do not create projects outside of OpenUnison.  First run the following command:
+Before restarting, we want to make sure that users do not create projects outside of OpenUnison, run the following command:
 
 ```
-$ oadm policy remove-cluster-role-from-group self-provisioner system:authenticated system:authenticated:oauth
+$ oc adm policy remove-cluster-role-from-group self-provisioner system:authenticated system:authenticated:oauth
 ```
 
 Next update the `projectRequestMessage` parameter in `master-config.yaml` with a message to users telling them how to request projects such as **To request a new project click on the New OpenShift Project badge in OpenUnison**.
 
-Finally, restart the masters and you'll be able to login to the web console by clicking on the OpenShift badge in OpenUnison.
+Finally, configure SSO per the instructions in the `api-server-config` configmap in the `openunison` project.
 
 # Whats next?
 Now you can begin mapping OpenUnison's capabilities to your business and compliance needs.  For instance you can add multi-factor authentication with TOTP or U2F, Create privileged workflows for onboarding, scheduled workflows that will deprovision users, etc.
