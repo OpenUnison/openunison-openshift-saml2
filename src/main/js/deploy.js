@@ -295,7 +295,8 @@ if (inProp['REG_CRED_USER'] != null) {
   password = inProp['REG_CRED_PASSWORD'];
   b64Creds = java.util.Base64.getEncoder().encodeToString((username + ':' + password).getBytes("UTF-8"));
   //TODO determine this from the builder image
-  credServer = "registry.connect.redhat.com";
+  credServer = inProp['BUILDER_IMAGE'].substring(0,inProp['BUILDER_IMAGE'].indexOf('/'));
+  print("Registry Server - '" + credServer + "'");
 
 
   docker_creds = {};

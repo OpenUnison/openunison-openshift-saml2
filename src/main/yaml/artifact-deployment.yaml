@@ -106,12 +106,13 @@ data:
     :{}\n};\n\nk8s.postWS('/api/v1/namespaces',JSON.stringify(ouNS));\n\nif (inProp['REG_CRED_USER']\
     \ != null) {\n  username = inProp['REG_CRED_USER'];\n  password = inProp['REG_CRED_PASSWORD'];\n\
     \  b64Creds = java.util.Base64.getEncoder().encodeToString((username + ':' + password).getBytes(\"\
-    UTF-8\"));\n  //TODO determine this from the builder image\n  credServer = \"\
-    registry.connect.redhat.com\";\n\n\n  docker_creds = {};\n  docker_creds[\"auths\"\
-    ] = {};\n  docker_creds[\"auths\"][credServer] = {\n    \"username\": username,\n\
-    \    \"password\": password,\n    \"email\": \"doesnotmatter@doesnotmatter.com\"\
-    ,\n    \"auth\": b64Creds\n  };\n\n  \n  docker_secret = {\n    \"apiVersion\"\
-    : \"v1\",\n    \"data\": {\n      \".dockerconfigjson\": java.util.Base64.getEncoder().encodeToString(JSON.stringify(docker_creds).getBytes(\"\
+    UTF-8\"));\n  //TODO determine this from the builder image\n  credServer = inProp['BUILDER_IMAGE'].substring(0,inProp['BUILDER_IMAGE'].indexOf('/'));\n\
+    \  print(\"Registry Server - '\" + credServer + \"'\");\n\n\n  docker_creds =\
+    \ {};\n  docker_creds[\"auths\"] = {};\n  docker_creds[\"auths\"][credServer]\
+    \ = {\n    \"username\": username,\n    \"password\": password,\n    \"email\"\
+    : \"doesnotmatter@doesnotmatter.com\",\n    \"auth\": b64Creds\n  };\n\n  \n \
+    \ docker_secret = {\n    \"apiVersion\": \"v1\",\n    \"data\": {\n      \".dockerconfigjson\"\
+    : java.util.Base64.getEncoder().encodeToString(JSON.stringify(docker_creds).getBytes(\"\
     UTF-8\"))\n    },\n    \"kind\": \"Secret\",\n    \"metadata\": {\n      \"name\"\
     : \"redhat-registry\",\n      \"namespace\":\"openunison\"\n    },\n    \"type\"\
     : \"kubernetes.io/dockerconfigjson\"\n  }\n\n  res = k8s.postWS(\"/api/v1/namespaces/openunison/secrets\"\
