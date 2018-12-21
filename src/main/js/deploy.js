@@ -297,17 +297,17 @@ if (inProp['REG_CRED_USER'] != null) {
   //TODO determine this from the builder image
   credServer = "registry.connect.redhat.com";
 
-  docker_creds = {
-    "auths": {
-      credServer: {
-        "username": username,
-        "password": password,
-        "email": "doesnotmatter@doesnotmatter.com",
-        "auth": b64Creds
-      }
-    }
-  }
 
+  docker_creds = {};
+  docker_creds["auths"] = {};
+  docker_creds["auths"][credServer] = {
+    "username": username,
+    "password": password,
+    "email": "doesnotmatter@doesnotmatter.com",
+    "auth": b64Creds
+  };
+
+  
   docker_secret = {
     "apiVersion": "v1",
     "data": {
@@ -315,8 +315,8 @@ if (inProp['REG_CRED_USER'] != null) {
     },
     "kind": "Secret",
     "metadata": {
-      "creationTimestamp": null,
-      "name": "redhat-registry"
+      "name": "redhat-registry",
+      "namespace":"openunison"
     },
     "type": "kubernetes.io/dockerconfigjson"
   }
@@ -614,6 +614,10 @@ ou_build = {
 		]
 	}
 };
+
+if (inProp['REG_CRED_USER'] != null) {
+  ou_build.spec.strategy.sourceStrategy['pullSecret'] = {"name":"redhat-registry"};
+}
 
 k8s.postWS('/apis/build.openshift.io/v1/namespaces/openunison/buildconfigs',JSON.stringify(ou_build));
 
