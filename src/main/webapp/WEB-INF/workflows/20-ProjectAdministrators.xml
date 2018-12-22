@@ -2,19 +2,36 @@
 <dynamicConfiguration dynamic="true" className="com.tremolosecurity.unison.openshiftv3.wf.OpenShiftWorkflows">
   <param name="target" value="openshift"/>
   <param name="kind" value="/oapi/v1/projects"/>
-  <param name="filter" value="default" />
-  <param name="filter" value="kube-system" />
-  <param name="filter" value="kube-public" />
-
-  <param name="filter" value="myproject" />
-  <param name="filter" value="openshift" />
-  <param name="filter" value="openshift-infra" />
-  <param name="filter" value="unison-service" />
-  <param name="filter" value="openunison" />
-  <param name="filter" value="logging" />
-  <param name="filter" value="management-infra" />
+  
 </dynamicConfiguration>
 <tasks>
+  <customTask className="com.tremolosecurity.unison.k8s.tasks.DoesGroupExist">
+      <param name="target" value="jitdb"/>
+      <param name="groupName" value="approvers-openshift-$name$" />
+      <param name="attributeName" value="tremolo.approval.group.exists" />
+  </customTask>
+
+
+  <ifAttrHasValue name="tremolo.approval.group.exists" value="false">
+    <onSuccess>
+      <customTask className="com.tremolosecurity.provisioning.customTasks.AddGroupToStore">
+          <param name="target" value="jitdb"/>
+          <param name="name" value="approvers-openshift-$name$"/>
+          <param name="attributes" value="unison.group.create.sql=INSERT INTO localGroups (name,description) VALUES (?,?)"/>
+          <param name="attributes" value="unison.group.create.param.2=Approve access to $name$" />
+      </customTask>
+
+      <customTask className="com.tremolosecurity.unison.k8s.tasks.CopyGroupMembers">
+        <param name="copyWorkflow" value="addApproverUsers"/>
+        <param name="copyTo" value="approvers-openshift-$name$" />
+        <param name="copyFrom" value="cn=administrators,ou=groups,ou=shadow,o=Tremolo" />
+        <param name="uidAttributeName" value="uid" />
+        <param name="requestor" value="system" />
+      </customTask>
+
+    </onSuccess>
+  </ifAttrHasValue>
+  
   <customTask className="com.tremolosecurity.provisioning.customTasks.LoadAttributes">
       <param name="nameAttr" value="uid"/>
       <param name="name" value="givenname"/>
@@ -23,6 +40,20 @@
   </customTask>
   <approval label="Approve Administrator Access to $name$">
       <onSuccess>
+          <customTask className="com.tremolosecurity.provisioning.customTasks.AddGroupToStore">
+                <param name="target" value="jitdb"/>
+                <param name="name" value="administrators-$name$"/>
+                <param name="attributes" value="unison.group.create.sql=INSERT INTO localGroups (name,description) VALUES (?,?)"/>
+                <param name="attributes" value="unison.group.create.param.2=Manage kubernetes namespace $name$" />
+            </customTask>
+
+            <customTask className="com.tremolosecurity.provisioning.tasks.CreateK8sObject">
+                <param name="targetName" value="openshift"/>
+                <param name="template" value="{&quot;kind&quot;:&quot;RoleBinding&quot;,&quot;apiVersion&quot;:&quot;rbac.authorization.k8s.io/v1&quot;,&quot;metadata&quot;:{&quot;name&quot;:&quot;admins-binding&quot;,&quot;namespace&quot;:&quot;$name$&quot;},&quot;subjects&quot;:[{&quot;kind&quot;:&quot;Group&quot;,&quot;name&quot;:&quot;administrators-$name$&quot;,&quot;apiGroup&quot;:&quot;rbac.authorization.k8s.io&quot;}],&quot;roleRef&quot;:{&quot;kind&quot;:&quot;ClusterRole&quot;,&quot;name&quot;:&quot;admin&quot;,&quot;apiGroup&quot;:&quot;rbac.authorization.k8s.io&quot;}}"/>
+                <param name="kind" value="RoleBinding" />
+                <param name="url" value="/apis/rbac.authorization.k8s.io/v1/namespaces/$name$/rolebindings" />
+            </customTask>
+            
           <addGroup name="administrators-$name$" remove="false"/>
           <provision sync="false" target="openshift" setPassword="false" onlyPassedInAttributes="false">
               <attributes/>
