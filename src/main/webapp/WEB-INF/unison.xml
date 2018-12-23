@@ -154,6 +154,19 @@
             <!-- The name of the attribute that has the user's email address	-->
             <param name="mailAttributeName" value="mail" />
           </job>
+          <job className="com.tremolosecurity.unison.openshiftv3.jobs.DeleteObject" name="deleteSelfProvisioner" group="management">
+          	<cronSchedule
+          		seconds="0"
+          		minutes="*"
+          		hours="*"
+          		dayOfMonth="*"
+          		month="*"
+          		dayOfWeek="?"
+          		year="*"
+          	/>
+            <param name="target" value="openshift" />            
+            <param name="uri" value="/apis/authorization.openshift.io/v1/clusterrolebindings/self-provisioners" />
+          </job>
         </scheduler>
         <listeners>
           <listener className="com.tremolosecurity.provisioning.listeners.UpdateApprovalAZListener" queueName="rebaseQueue"></listener>

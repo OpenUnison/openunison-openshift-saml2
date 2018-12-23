@@ -201,18 +201,9 @@ Once SSO is enabled in the next step, you'll need a cluster administrator to be 
 At this point you will be provisioned to the `cluster-admins` group in OpenShift we created earlier.  Logout of OpenUnison and log back in.  If you click on your email address in the upper left, you'll see that you have the Role `OpenShift - cluster-admins`.  
 
 ## Enable SSO with OpenShift Console
-
-OpenShift doesn't directly support single logout, so to logout of OpenUnison (and your SAML2 identity provider) update the `logoutURL` setting in the `master-config.yaml` file to point to `/logout` on your OpenUnison deployment.  So if your `HOSTNAME_HTTPS` were `ouidp.tremolo.lan` the value should be `https://ouidp.tremolo.lan/logout`.
-
-Before restarting, we want to make sure that users do not create projects outside of OpenUnison, run the following command:
-
-```
-$ oc adm policy remove-cluster-role-from-group self-provisioner system:authenticated system:authenticated:oauth
-```
-
 Next update the `projectRequestMessage` parameter in `master-config.yaml` with a message to users telling them how to request projects such as **To request a new project click on the New OpenShift Project badge in OpenUnison**.
 
-Finally, configure SSO per the instructions in the `api-server-config` configmap in the `openunison` project.
+Finally, configure SSO per the instructions in the `api-server-config` configmap in the `openunison` project.  *NOTE:* make sure to set the `clientSecret` attribute for your cluster.
 
 # Whats next?
 Now you can begin mapping OpenUnison's capabilities to your business and compliance needs.  For instance you can add multi-factor authentication with TOTP or U2F, Create privileged workflows for onboarding, scheduled workflows that will deprovision users, etc.
