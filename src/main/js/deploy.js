@@ -197,7 +197,7 @@ ouKs.setCertificateEntry('k8s-master',k8s.getCertificate('k8s-master'));
 
 //import metadata
 
-fXmlFile = new java.io.File("/etc/secrets/saml2-metadata.xml");
+fXmlFile = new java.io.File("/etc/extracerts/saml2-metadata.xml");
 dbFactory = javax.xml.parsers.DocumentBuilderFactory.newInstance();
 dBuilder = dbFactory.newDocumentBuilder();
 doc = dBuilder.parse(fXmlFile);

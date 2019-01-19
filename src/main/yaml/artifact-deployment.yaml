@@ -71,7 +71,7 @@ data:
     CertUtils.saveX509ToKeystore(ouKs,ksPassword,\"unison-saml2-rp-sig\",x509data);\n\
     \nrp_sig_cert_bytes = x509data.getCertificate();\n\nprint(\"Storing k8s certs\"\
     );\nouKs.setCertificateEntry('k8s-master',k8s.getCertificate('k8s-master'));\n\
-    \n\n//import metadata\n\nfXmlFile = new java.io.File(\"/etc/secrets/saml2-metadata.xml\"\
+    \n\n//import metadata\n\nfXmlFile = new java.io.File(\"/etc/extracerts/saml2-metadata.xml\"\
     );\ndbFactory = javax.xml.parsers.DocumentBuilderFactory.newInstance();\ndBuilder\
     \ = dbFactory.newDocumentBuilder();\ndoc = dBuilder.parse(fXmlFile);\n\n//get\
     \ entity id\nentityId = doc.getElementsByTagName(\"EntityDescriptor\").item(0).getAttribute(\"\
