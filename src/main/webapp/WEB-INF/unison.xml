@@ -283,6 +283,13 @@ auditLogType.name  AS `Action`,CASE WHEN isEntry = 1 THEN 'Object' ELSE 'Attribu
                 <dataFields>Name</dataFields>
                 <dataFields>Value</dataFields>
             </report>
+            <report orgID="d2f56bce-b0d4-44fa-8c5d-bd600b0bc589" name="Dormant Users" description="Users the haven't logged into OpenShift for 30 days" groupings="false">
+                <sql>select (SELECT value FROM userAttributes WHERE name='uid' AND userid=user_id) AS `User ID`,(SELECT value FROM userAttributes WHERE name='givenname' AND userid=user_id) AS `First Name`, (SELECT value FROM userAttributes WHERE name='sn' AND userid=user_id) AS `Last Name`, (SELECT value FROM userAttributes WHERE name='mail' AND userid=user_id) AS `Email Address`  from  (select userid as user_id,max(completeTS) as last_login from workflows where name='jitdb' group by userid,completeTS) X where last_login < DATE_SUB(CURDATE(),INTERVAL 10 DAY)</sql>
+                <dataFields>User ID</dataFields>
+                <dataFields>First Name</dataFields>
+                <dataFields>Last Name</dataFields>
+                <dataFields>Email Address</dataFields>
+            </report>
         </reports>
 
 
