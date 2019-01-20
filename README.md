@@ -115,16 +115,16 @@ Store these parameters in a file called `input.props`.
 
 Perform these steps from a location with a working `kubectl` configuration:
 
-1. Create a directory to store `input.props`, ie `/path/to/props` and put `input.props` in that directory
-2. Copy the metadata from your SAML2 identity provider to `/path/to/props/saml2-metadata.xml`
-3. Create a directory for certs, ie `/path/to/certs`
+1. Create a directory for secrets to store `input.props`, ie `/path/to/secrets` and put `input.props` in that directory
+2. Create a directory for configmaps, ie `/path/to/configmaps`, and copy the metadata from your SAML2 identity provider to `/path/to/configmaps/saml2-metadata.xml`
+
 
 ## Deployment
 
 Based on where you put the files from `Prepare Deployment`, run the following:
 
 ```
-curl https://raw.githubusercontent.com/TremoloSecurity/kubernetes-artifact-deployment/master/src/main/bash/deploy_openunison.sh | bash -s /path/to/certs /path/to/props https://raw.githubusercontent.com/OpenUnison/openunison-openshift-saml2/master/src/main/yaml/artifact-deployment.yaml
+curl https://raw.githubusercontent.com/TremoloSecurity/kubernetes-artifact-deployment/master/src/main/bash/deploy_openunison.sh | bash -s /path/to/configmaps /path/to/secrets https://raw.githubusercontent.com/OpenUnison/openunison-openshift-saml2/master/src/main/yaml/artifact-deployment.yaml
 ```
 
 The output will look like:
