@@ -174,7 +174,7 @@
                         <param name="projectName.type" value="text"/>
 
                         <param name="workflowName" value="NewOpenShiftProject" />
-                        <param name="targetName" value=="openshift" />
+                        <param name="targetName" value="openshift" />
                         <param name="projectAttributeName" value="projectName" />
 
                     </filter>
