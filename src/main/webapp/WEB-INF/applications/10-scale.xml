@@ -147,7 +147,7 @@
                     <filter class="com.tremolosecurity.scalejs.register.ws.ScaleRegister">
                         <param name="displayNameAttribute" value="mail"/>
                         <param name="uidAttributeName" value="uid"/>
-                        <param name="workflowName" value="NewOpenShiftProject"/>
+                        <param name="workflowName" value=""/>
                         <param name="logoutURL" value="/logout"/>
                         <param name="homeURL" value="/"/>
                         <param name="frontPage.text" value="Use this page to request the creation of a new project.  Once the project is approved you will be the first approver and administrator.  You will be notified when the project is ready."/>
@@ -160,7 +160,7 @@
                         <param name="requireTermsAndConditions" value="false"/>
                         <param name="termsAndConditionsText" value=""/>
                         <param name="useCallWorkflowClass" value="false"/>
-                        <param name="callWorkflowClassName" value=""/>
+                        <param name="callWorkflowClassName" value="com.tremolosecurity.scalejs.K8sProjectCheck"/>
                         <param name="submitLoggedInUser" value="true"/>
                         <param name="attributeNames" value="projectName"/>
                         <param name="projectName.displayName" value="Project Name"/>
@@ -172,6 +172,11 @@
                         <param name="projectName.maxChars" value="0"/>
                         <param name="projectName.unique" value="false"/>
                         <param name="projectName.type" value="text"/>
+
+                        <param name="workflowName" value="NewOpenShiftProject" />
+                        <param name="targetName" value=="openshift" />
+                        <param name="projectAttributeName" value="projectName" />
+
                     </filter>
                 </filterChain>
                 <uri>/newproject/register</uri>
