@@ -173,9 +173,9 @@
                         <param name="projectName.unique" value="false"/>
                         <param name="projectName.type" value="text"/>
 
-                        <param name="workflowName" value="NewOpenShiftProject" />
-                        <param name="targetName" value="openshift" />
-                        <param name="projectAttributeName" value="projectName" />
+                        <param name="callWorkflowInit" value="workflowName=NewOpenShiftProject" />
+                        <param name="callWorkflowInit" value="targetName=openshift" />
+                        <param name="callWorkflowInit" value="projectAttributeName=projectName" />
 
                     </filter>
                 </filterChain>
