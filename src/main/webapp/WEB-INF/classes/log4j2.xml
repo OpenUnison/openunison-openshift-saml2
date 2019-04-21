@@ -7,10 +7,10 @@
   </Appenders>
   <Loggers>
 
-    <Root level="info">
+    <Root level="debug">
       <AppenderRef ref="STDOUT"/>
     </Root> 
-    <Logger name="org.reflections"  level="info">
+    <Logger name="org.reflections"  level="debug">
   <AppenderRef ref="STDOUT" level="debug"/>
 </Logger>
   </Loggers>
