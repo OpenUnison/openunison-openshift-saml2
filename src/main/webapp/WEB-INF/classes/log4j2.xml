@@ -13,5 +13,8 @@
     <Logger name="org.reflections"  level="info">
   <AppenderRef ref="STDOUT" level="info"/>
 </Logger>
+ <Logger name="org.apache.http" level="DEBUG">
+      <AppenderRef ref="STDOUT"/>
+    </Logger>
   </Loggers>
 </Configuration>
