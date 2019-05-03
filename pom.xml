@@ -4,13 +4,13 @@
   <groupId>io.openunison</groupId>
   <artifactId>openunison-openshift-idm</artifactId>
   <packaging>war</packaging>
-  <version>1.0.16</version>
+  <version>1.0.17</version>
   <name>openunison-openshift-idm</name>
   <url>http://openunison.io</url>
   <repositories>
     <repository>
       <id>Tremolo Security Releases</id>
-      <url>https://nexus.tremolo.io/repository/releases/</url>
+      <url>https://nexus.tremolo.io/repository/betas/</url>
     </repository>
   </repositories>
 
@@ -18,7 +18,7 @@
     <dependency>
       <groupId>com.tremolosecurity.unison</groupId>
       <artifactId>open-unison-webapp</artifactId>
-      <version>1.0.16</version>
+      <version>1.0.17</version>
       <type>war</type>
       <scope>runtime</scope>
       <exclusions>
@@ -31,7 +31,7 @@
     <dependency>
       <groupId>com.tremolosecurity.unison</groupId>
       <artifactId>open-unison-webapp</artifactId>
-      <version>1.0.16</version>
+      <version>1.0.17</version>
       <type>pom</type>
       <exclusions>
       <exclusion>
@@ -48,12 +48,12 @@
     <dependency>
       <groupId>com.tremolosecurity.unison</groupId>
       <artifactId>openunison-on-undertow</artifactId>
-      <version>1.0.16</version>
+      <version>1.0.17</version>
     </dependency>
     <dependency>
       <groupId>com.tremolosecurity.unison</groupId>
       <artifactId>unison-scalejs-main</artifactId>
-      <version>1.0.16</version>
+      <version>1.0.17</version>
     </dependency>
   </dependencies>
   <build>
