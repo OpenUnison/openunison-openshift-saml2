@@ -56,7 +56,7 @@
 
                 <customTask className="com.tremolosecurity.provisioning.tasks.CreateK8sObject">
                     <param name="targetName" value="openshift"/>
-                    <param name="template" value="{&quot;kind&quot;:&quot;Namespace&quot;,&quot;apiVersion&quot;:&quot;v1&quot;,&quot;metadata&quot;:{&quot;name&quot;:&quot;$nameSpace$&quot;,&quot;labels&quot;:{&quot;name&quot;:&quot;$nameSpace$&quot;}}}"/>
+                    <param name="template" value="{&quot;kind&quot;:&quot;Namespace&quot;,&quot;apiVersion&quot;:&quot;v1&quot;,&quot;metadata&quot;:{&quot;name&quot;:&quot;$projectName$&quot;,&quot;labels&quot;:{&quot;name&quot;:&quot;$projectName$&quot;}}}"/>
                     <param name="kind" value="Namespace" />
                     <param name="url" value="/api/v1/namespaces" />
                 </customTask>
