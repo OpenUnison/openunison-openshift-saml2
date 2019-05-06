@@ -172,6 +172,19 @@
             <param name="target" value="openshift" />            
             <param name="uri" value="/apis/authorization.openshift.io/v1/clusterrolebindings/self-provisioners" />
           </job>
+          <job className="com.tremolosecurity.jobs.CheckSamlIdPs" name="checkSamlIdps" group="management">
+          	<cronSchedule
+          		seconds="0"
+          		minutes="*"
+          		hours="*"
+          		dayOfMonth="*"
+          		month="*"
+          		dayOfWeek="?"
+          		year="*"
+          	/>
+            <param name="target" value="openshift" />            
+            <param name="selfLink" value="#[K8S_SELF_LINK]" />
+          </job>
         </scheduler>
         <listeners>
           <listener className="com.tremolosecurity.provisioning.listeners.UpdateApprovalAZListener" queueName="rebaseQueue"></listener>
