@@ -172,7 +172,7 @@
             <param name="target" value="openshift" />            
             <param name="uri" value="/apis/authorization.openshift.io/v1/clusterrolebindings/self-provisioners" />
           </job>
-          <job className="com.tremolosecurity.jobs.CheckSamlIdPs" name="checkSamlIdps" group="management">
+          <job className="com.tremolosecurity.jobs.CheckSamlIdPs" name="checkSamlIdps" group="operators">
           	<cronSchedule
           		seconds="0"
           		minutes="*"
