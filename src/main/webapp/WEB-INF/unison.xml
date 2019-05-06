@@ -174,7 +174,7 @@
           </job>
           <job className="com.tremolosecurity.jobs.CheckSamlIdPs" name="checkSamlIdps" group="operators">
           	<cronSchedule
-          		seconds="0"
+          		seconds="*"
           		minutes="*"
           		hours="*"
           		dayOfMonth="*"
