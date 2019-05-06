@@ -159,7 +159,7 @@
             <!-- The name of the attribute that has the user's email address	-->
             <param name="mailAttributeName" value="mail" />
           </job>
-          <job className="com.tremolosecurity.unison.openshiftv3.jobs.DeleteObject" name="deleteSelfProvisioner" group="management">
+          <job className="com.tremolosecurity.unison.openshiftv3.jobs.DeleteObject" name="deleteSelfProvisioner" group="cluster-management">
           	<cronSchedule
           		seconds="0"
           		minutes="*"
@@ -174,7 +174,7 @@
           </job>
           <job className="com.tremolosecurity.jobs.CheckSamlIdPs" name="checkSamlIdps" group="operators">
           	<cronSchedule
-          		seconds="*"
+          		seconds="*/30"
           		minutes="*"
           		hours="*"
           		dayOfMonth="*"
