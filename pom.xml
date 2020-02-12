@@ -8,9 +8,16 @@
   <name>openunison-openshift-idm</name>
   <url>http://openunison.io</url>
   <repositories>
+    
+    
+    
+    <repository>
+      <id>Tremolo Security Dependencies</id>
+      <url>https://nexus.tremolo.io/repository/dependencies/</url>
+    </repository>
     <repository>
       <id>Tremolo Security Releases</id>
-      <url>https://nexus.tremolo.io/repository/betas/</url>
+      <url>https://nexus.tremolo.io/repository/releases/</url>
     </repository>
   </repositories>
 
