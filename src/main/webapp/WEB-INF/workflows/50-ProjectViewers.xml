@@ -1,7 +1,7 @@
 <workflow name="ProjectViewers" label="$name$ Viewer" description="$openshift_io/description$" inList="true" orgid="97137c31-a417-4498-907d-e61f8686eb97">
     <dynamicConfiguration dynamic="true" className="com.tremolosecurity.unison.openshiftv3.wf.OpenShiftWorkflows">
         <param name="target" value="openshift"/>
-        <param name="kind" value="/oapi/v1/projects"/>
+        <param name="kind" value="/api/v1/namespaces"/>
         <param name="filter" value="default" />
         <param name="filter" value="kube-system" />
         <param name="filter" value="myproject" />

@@ -13,5 +13,6 @@
     <Logger name="org.reflections"  level="info">
   <AppenderRef ref="STDOUT" level="info"/>
 </Logger>
+
   </Loggers>
 </Configuration>

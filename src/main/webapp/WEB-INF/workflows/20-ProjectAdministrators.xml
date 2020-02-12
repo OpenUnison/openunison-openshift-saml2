@@ -1,7 +1,7 @@
 <workflow name="ProjectAdministrators" label="$name$ Administrator" description="$openshift_io/description$" inList="true" orgid="cecae082-c85d-48df-a837-4726bb755180">
 <dynamicConfiguration dynamic="true" className="com.tremolosecurity.unison.openshiftv3.wf.OpenShiftWorkflows">
   <param name="target" value="openshift"/>
-  <param name="kind" value="/oapi/v1/projects"/>
+  <param name="kind" value="/api/v1/namespaces"/>
   
 </dynamicConfiguration>
 <tasks>

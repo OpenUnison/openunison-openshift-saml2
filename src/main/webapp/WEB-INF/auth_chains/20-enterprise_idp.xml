@@ -9,7 +9,7 @@
       <param value="uid" name="ldapAttribute" />
       <param value="saml" name="dnOU" />
       <param value="inetOrgPerson" name="defaultOC" />
-      <param name="authCtxRef" value=""/>
+      <param name="authCtxRef" value="urn:oasis:names:tc:SAML:2.0:ac:classes:PasswordProtectedTransport"/>
       <param name="spSigKey" value="unison-saml2-rp-sig" />
       <param name="sigAlg" value="RSA-SHA256" />
       <param name="signAuthnReq" value="true"/>
